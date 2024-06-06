@@ -29,6 +29,9 @@ chrome.webRequest.onCompleted.addListener(
           chrome.storage.local.set({ [`lastResponse_${activeTabId}`]: text }, () => {
             console.log("Captured response:", text);
             chrome.tabs.sendMessage(activeTabId, { action: "responseCaptured", text: text }, (response) => {
+              if (chrome.runtime.lastError) {
+                console.error(`Could not send message to tab: ${chrome.runtime.lastError.message}`);
+              }
             });
           });
         })

@@ -1,10 +1,10 @@
 let lastseg = "";
 let intervalId;
-
+let segCount = 0;
 if (!document.getElementById('response')) {
     const res = document.createElement('p');
     res.id = 'response';
-    res.textContent = 'Loading...';
+    res.textContent = '';
     res.style.position = 'fixed';
     res.style.bottom = '0';
     res.style.left = '0';
@@ -51,19 +51,18 @@ function addDownloadBTN(text, animeName) {
 
 // Function to parse the M3U8 file
 async function parseM3U8(m3u8Content) {
-    const lines = m3u8Content.split('\n').filter(line => line && !line.startsWith('#'));
-    let lastLine = lines[lines.length - 2];
+    segCount = 0;
+    const lines = m3u8Content.split('\n').filter(line => line && !line.startsWith('#')).slice(0, -1);
+    let lastLine = lines[lines.length - 1];
     lastseg = lastLine.split('/').slice(-1)[0].slice(5, -5);
-    // console.log(lines);
-    // console.log(lastseg);
-
     return lines;
 }
 
 // Function to fetch a segment as a Blob
 async function fetchSegment(url) {
     const response = await fetch(url);
-    responseE.textContent = url.split("/").slice(-1)[0].slice(5, -5) + "/" + lastseg;;
+    responseE.textContent = segCount + "/" + lastseg;
+    segCount += 1;
     return response.blob();
 }
 
