@@ -1,6 +1,7 @@
 let lastseg = "";
 let intervalId;
 let segCount = 0;
+
 if (!document.getElementById('response')) {
     const res = document.createElement('p');
     res.id = 'response';
@@ -36,18 +37,18 @@ function addDownloadBTN(text, animeName) {
         downloadButton.style.zIndex = '9999';
         downloadButton.addEventListener('click', async () => {
             document.getElementById('response').textContent = 'Downloading...';
-            const segmentUrls = await parseM3U8(text);
-            const concatenatedBlob = await concatenateSegments(segmentUrls);
-            await downloadBlob(concatenatedBlob, `${animeName}.mp4`);
-            document.getElementById('download').textContent = 'Download';
+            try {
+                const segmentUrls = await parseM3U8(text);
+                const concatenatedBlob = await concatenateSegments(segmentUrls);
+                await downloadBlob(concatenatedBlob, `${animeName}.mp4`);
+                document.getElementById('download').textContent = 'Download';
+            } catch (error) {
+                responseE.textContent = `Download failed: ${error.message}`;
+            }
         });
         document.body.insertBefore(downloadButton, responseE);
     }
 }
-
-// intervalId = setInterval(updateResponse, 200);
-// document.addEventListener('DOMContentLoaded', updateResponse);
-
 
 // Function to parse the M3U8 file
 async function parseM3U8(m3u8Content) {
@@ -58,12 +59,25 @@ async function parseM3U8(m3u8Content) {
     return lines;
 }
 
-// Function to fetch a segment as a Blob
-async function fetchSegment(url) {
-    const response = await fetch(url);
-    responseE.textContent = segCount + "/" + lastseg;
-    segCount += 1;
-    return response.blob();
+// Function to fetch a segment as a Blob with retries
+async function fetchSegment(url, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            responseE.textContent = segCount + "/" + lastseg;
+            segCount += 1;
+            return await response.blob();
+        } catch (error) {
+            console.error(`Failed to fetch segment ${url}: ${error.message}`);
+            if (i < retries - 1) {
+                console.log(`Retrying... (${i + 1}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+            } else {
+                throw error;
+            }
+        }
+    }
 }
 
 async function concatenateSegments(segmentUrls) {
